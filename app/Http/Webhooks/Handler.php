@@ -85,9 +85,9 @@ class Handler extends WebhookHandler
 
         $query = trim(str_replace('/sql', '', $this->message->text()));
 
+
         if (empty($query)) {
             $this->reply("SQL so'rovini kiriting. Masalan: /sql SELECT * FROM users WHERE id = 1");
-            return;
         }
 
         try {
@@ -282,15 +282,23 @@ class Handler extends WebhookHandler
 
     public function actions(): void
     {
-        Telegraph::message('Tanla')->keyboard(
-            Keyboard::make()->buttons([
-                Button::make('Saytga otish')->url('https://xorijdaish.uz'),
-                Button::make('Qiziqish bildirish')->action('like'),
-                Button::make('Obuna bo\'lish')
-                    ->action('subscribe')
-                    ->param('channel_name', '@xorijdaish'),
-            ])
-        )->send();
+//        $this->chat->message('Tanla')->keyboard(
+//            Keyboard::make()->buttons([
+//                Button::make('Saytga otish')->url('https://xorijdaish.uz'),
+//                button('Qiziqish bildirish')->action('like'),
+//                Button::make('Obuna bo\'lish')
+//                    ->action('subscribe')
+//                    ->param('channel_name', '@xorijdaish'),
+//            ])
+//        )->send();
+
+        $this->chat->message('Tanla')
+            ->keyboard(function(Keyboard $keyboard){
+                return $keyboard
+                    ->button('Qiziqish bildirish')->action('like')
+                    ->button('Saytga otish')->url('https://xorijdaish.uz')
+                    ->button('Obuna bo\'lish')->action('subscribe')->param('channel_name','@xorijdaish');
+            })->send();
     }
 
     public function logs(): void
@@ -352,7 +360,7 @@ class Handler extends WebhookHandler
 
     public function like(): void
     {
-        Telegraph::message('Siz qiziqish bildirgan vakansiya raqamini tanlang')->send();
+        $this->chat->message('Siz qiziqish bildirgan vakansiya raqamini tanlang')->send();
     }
 
     public function subscribe(): void
