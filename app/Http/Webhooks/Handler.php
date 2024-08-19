@@ -14,38 +14,135 @@ use Illuminate\Support\Facades\File;
 use DefStudio\Telegraph\Keyboard\Keyboard;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Stringable;
 use Maatwebsite\Excel\Facades\Excel;
 use PDO;
+use Symfony\Component\Process\Exception\ProcessFailedException;
 use Symfony\Component\Process\Process;
 
 class Handler extends WebhookHandler
 {
-    public function connectionDB($connection): void
+
+    private array $connections = [
+        'sertifikat_db' => [
+            'ssh_host' => '185.8.212.167',
+            'ssh_port' => '22',
+            'ssh_username' => 'sertifikat-api',
+            'ssh_password' => 'TAL7_LnAnJ7Lds3a',
+            'db_host' => '127.0.0.1',
+            'db_port' => '6432',
+            'database' => 'sertifikat_db',
+            'db_username' => 'sertifikat_user',
+            'db_password' => 'KMr3HL_3xraR',
+        ],
+    ];
+
+    public function start(): void
+    {
+        $this->reply("Botga xush kelibsiz! Quyidagi buyruqlardan foydalaning:\n/select_connections - Ulanishni tanlash\n/sql - SQL so'rovini yuborish");
+    }
+
+    public function select_connections(): void
+    {
+        $keyboard = Keyboard::make();
+        foreach (array_keys($this->connections) as $connectionName) {
+            $keyboard->buttons([
+                Button::make($connectionName)->action('setConnection')->param('name', $connectionName),
+            ]);
+        }
+
+        $this->chat->message('Ulanishni tanlang:')
+            ->keyboard($keyboard)
+            ->send();
+    }
+
+    public function setConnection(): void
+    {
+        $connectionName = $this->data->get('name');
+        if (isset($this->connections[$connectionName])) {
+            Cache::put('selected_connection_' . $this->chat->id, $connectionName, 3600);
+            $this->reply("$connectionName ulanishi tanlandi. Endi /sql buyrug'i orqali so'rov yuborishingiz mumkin.");
+        } else {
+            $this->reply("Noto'g'ri ulanish tanlandi.");
+        }
+    }
+
+    public function sql(): void
+    {
+        $connectionName = Cache::get('selected_connection_' . $this->chat->id);
+        if (!$connectionName) {
+            $this->reply("Iltimos, avval /select_connection buyrug'i orqali ulanishni tanlang.");
+            return;
+        }
+
+        $connection = $this->connections[$connectionName];
+
+        try {
+            $this->connectionDB($connection);
+        } catch (Exception $e) {
+            $this->reply("Ulanishda xatolik yuz berdi: " . $e->getMessage());
+            return;
+        }
+
+        $query = trim(str_replace('/sql', '', $this->message->text()));
+
+        if (empty($query)) {
+            $this->reply("SQL so'rovini kiriting. Masalan: /sql SELECT * FROM users WHERE id = 1");
+            return;
+        }
+
+        try {
+            $pdo = DB::connection('dynamic_pgsql')->getPdo();
+            $statement = $pdo->prepare($query);
+            $statement->execute();
+            $result = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+            if (empty($result)) {
+                $this->chat->message('Hech qanday ma\'lumot topilmadi.')->send();
+                return;
+            }
+
+            $this->storeQueryResult($result);
+            $this->chat->message('Natija topildi. Qaysi formatda faylni jo\'natish kerakligini tanlang:')
+                ->keyboard(
+                    Keyboard::make()
+                        ->buttons([
+                            Button::make('Excel')->action('sendFile')->param('format', 'excel'),
+                            Button::make('CSV')->action('sendFile')->param('format', 'csv')
+                        ])
+                )
+                ->send();
+        } catch (Exception $e) {
+            $this->chat->message('SQL so\'rovini bajarishda xato: ' . $e->getMessage())->send();
+        }
+    }
+
+    protected function connectionDB($connection): void
     {
         try {
-            Log::info('Ulanish ma\'lumotlari: ' . json_encode($connection, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+            Log::info('Ulanish ma\'lumotlari: ' . json_encode($connection, JSON_UNESCAPED_UNICODE));
 
-            // SSH tunneling sozlash
-            $sshProcess = new Process([
-                'ssh', '-o', 'StrictHostKeyChecking=no', '-f', '-L',
-                "6432:localhost:5432", // Local port forwarding
-                "{$connection['ssh_username']}@{$connection['ssh_host']}", // Remote SSH login
-                '-N'
-            ]);
+            $sshCommand = "ssh -o StrictHostKeyChecking=no -f -L {$connection['db_port']}:localhost:5432 {$connection['ssh_username']}@{$connection['ssh_host']} -N";
 
-            $sshProcess->run();
+            $process = Process::fromShellCommandline($sshCommand);
+            $process->setTimeout(null);
+            $process->run();
 
-            if (!$sshProcess->isSuccessful()) {
-                throw new Exception('SSH tunneling xatosi: ' . $sshProcess->getErrorOutput());
+            if (!$process->isSuccessful()) {
+                throw new ProcessFailedException($process);
             }
 
             Log::info('SSH tunneling muvaffaqiyatli o\'rnatildi.');
 
-            $arr = [
+            $pdo = new PDO(
+                "pgsql:host={$connection['db_host']};port={$connection['db_port']};dbname={$connection['database']}",
+                $connection['db_username'],
+                $connection['db_password']
+            );
+
+            Config::set('database.connections.dynamic_pgsql', [
                 'driver' => 'pgsql',
-                'host' => '127.0.0.1', // Local host for SSH tunnel
-                'port' => '6432', // Local port for SSH tunnel
+                'host' => $connection['db_host'],
+                'port' => $connection['db_port'],
                 'database' => $connection['database'],
                 'username' => $connection['db_username'],
                 'password' => $connection['db_password'],
@@ -53,15 +150,7 @@ class Handler extends WebhookHandler
                 'prefix' => '',
                 'schema' => 'public',
                 'sslmode' => 'prefer',
-            ];
-
-            $pdo = new PDO(
-                "pgsql:host={$arr['host']};port={$arr['port']};dbname={$arr['database']}",
-                $arr['username'],
-                $arr['password']
-            );
-
-            Config::set('database.connections.dynamic_pgsql', $arr);
+            ]);
 
             DB::purge('dynamic_pgsql');
             DB::connection('dynamic_pgsql')->setPdo($pdo);
@@ -69,11 +158,14 @@ class Handler extends WebhookHandler
             Log::info('Ulanish muvaffaqiyatli o\'rnatildi.');
         } catch (Exception $e) {
             Log::error('Ulanish xatosi: ' . $e->getMessage());
-            $this->chat->message('Baza bilan ulanishni amalga oshirishda xatolik yuz berdi: ' . $e->getMessage())->send();
+            Log::error('Xato tafsilotlari: ' . $e->getTraceAsString());
+            throw new Exception('Baza bilan ulanishni amalga oshirishda xatolik yuz berdi: ' . $e->getMessage());
         }
     }
 
-    public function sql(): void
+
+
+    public function sql1(): void
     {
         $sqlCommand = $this->data->get('text');
         $sqlCommand = str_replace('/sql', '', $sqlCommand);
@@ -135,7 +227,7 @@ class Handler extends WebhookHandler
 
     protected function storeQueryResult($result): void
     {
-        Cache::put('query_result', $result, 300);
+        Cache::put('query_result_' . $this->chat->id, $result, 300);
     }
 
     public function sendFile(string $format): void
@@ -268,12 +360,12 @@ class Handler extends WebhookHandler
         $this->reply("Rahmat sizga obuna uchun {$this->data->get('channel_name')}");
     }
 
-    protected function handleUnknownCommand(Stringable $text): void
+    protected function handleUnknownCommand($text): void
     {
-        if ($text->value() === '/start') {
-            $this->reply('Botga hush kelibsiz');
+        if ($text === '/start') {
+            $this->start();
         } else {
-            $this->reply('Nomalum kommanda');
+            $this->reply('Noma\'lum buyruq. Yordam uchun /start ni yuboring.');
         }
     }
 }

@@ -22,5 +22,6 @@ Artisan::command('tester', function () {
        'sql' => 'sql kommanda jo\'natish',
        'logs' => 'loglarni yuklab olish',
        'actions' => 'Actionlarni yuklab olish',
+       'select_connections' => 'Ulanish uchun bazani tanlang'
    ])->send();
 });
