@@ -282,23 +282,23 @@ class Handler extends WebhookHandler
 
     public function actions(): void
     {
-//        $this->chat->message('Tanla')->keyboard(
-//            Keyboard::make()->buttons([
-//                Button::make('Saytga otish')->url('https://xorijdaish.uz'),
-//                button('Qiziqish bildirish')->action('like'),
-//                Button::make('Obuna bo\'lish')
-//                    ->action('subscribe')
-//                    ->param('channel_name', '@xorijdaish'),
-//            ])
-//        )->send();
+        $this->chat->message('Tanla')->keyboard(
+            Keyboard::make()->buttons([
+                Button::make('Saytga otish')->url('https://xorijdaish.uz'),
+                Button::make('Qiziqish bildirish')->action('like'),
+                Button::make('Obuna bo\'lish')
+                    ->action('subscribe')
+                    ->param('channel_name', '@xorijdaish'),
+            ])
+        )->send();
 
-        $this->chat->message('Tanla')
-            ->keyboard(function(Keyboard $keyboard){
-                return $keyboard
-                    ->button('Qiziqish bildirish')->action('like')
-                    ->button('Saytga otish')->url('https://xorijdaish.uz')
-                    ->button('Obuna bo\'lish')->action('subscribe')->param('channel_name','@xorijdaish');
-            })->send();
+//        $this->chat->message('Tanla')
+//            ->keyboard(function(Keyboard $keyboard){
+//                return $keyboard
+//                    ->button('Qiziqish bildirish')->action('like')
+//                    ->button('Saytga otish')->url('https://xorijdaish.uz')
+//                    ->button('Obuna bo\'lish')->action('subscribe')->param('channel_name','@xorijdaish');
+//            })->send();
     }
 
     public function logs(): void
