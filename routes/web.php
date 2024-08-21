@@ -21,7 +21,7 @@ Route::get('/', function () {
 });
 
 
-// Telegram Webhook marshruti
+//Telegram Webhook marshruti
 Route::post('/telegram/webhook', [ProductController::class, 'handleWebhook']);
 
 // Webhookni sozlash uchun marshrut
@@ -36,8 +36,8 @@ Route::get('/set-webhook', function () {
 
     $options = [
         'http' => [
-            'header'  => "Content-type: application/x-www-form-urlencoded\r\n",
-            'method'  => 'POST',
+            'header' => "Content-type: application/x-www-form-urlencoded\r\n",
+            'method' => 'POST',
             'content' => http_build_query($data),
         ],
     ];

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Exports\DynamicExport;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
@@ -17,7 +18,7 @@ class ProductController extends Controller
     /**
      * @throws Exception
      */
-    public function handleWebhook(Request $request)
+    public function handleWebhook(Request $request): JsonResponse
     {
         $update = $request->all();
 
@@ -51,7 +52,7 @@ class ProductController extends Controller
     /**
      * @throws Exception
      */
-    private function handleUserInput($chatId, $message)
+    private function handleUserInput($chatId, $message): void
     {
         switch ($this->conversationState[$chatId] ?? null) {
             case 'awaiting_ssh_connection_type':
