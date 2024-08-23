@@ -13,5 +13,6 @@ class VerifyCsrfToken extends Middleware
      */
     protected $except = [
         '/telegram/webhook',  // Ushbu URL uchun CSRF himoyasini o'chirish
+        '/telegram/check',  // Ushbu URL uchun CSRF himoyasini o'chirish
     ];
 }

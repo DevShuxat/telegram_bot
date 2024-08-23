@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Exports\DynamicExport;
+use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Contracts\Routing\UrlGenerator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -21,6 +23,7 @@ class ProductController extends Controller
     public function handleWebhook(Request $request): JsonResponse
     {
         $update = $request->all();
+//        dd($update);
 
         $chatId = $update['message']['chat']['id'];
         $message = $update['message']['text'] ?? '';
@@ -52,7 +55,7 @@ class ProductController extends Controller
     /**
      * @throws Exception
      */
-    private function handleUserInput($chatId, $message): void
+    public function handleUserInput($chatId, $message): void
     {
         switch ($this->conversationState[$chatId] ?? null) {
             case 'awaiting_ssh_connection_type':
@@ -257,7 +260,7 @@ class ProductController extends Controller
         }
     }
 
-    private function exportToCsv($results): \Illuminate\Foundation\Application|string|\Illuminate\Contracts\Routing\UrlGenerator|\Illuminate\Contracts\Foundation\Application
+    private function exportToCsv($results): \Illuminate\Foundation\Application|string|UrlGenerator|Application
     {
         $filename = 'results.csv';
         $handle = fopen($filename, 'w+');
@@ -272,7 +275,7 @@ class ProductController extends Controller
         return url($filename);
     }
 
-    private function exportToExcel($results): \Illuminate\Foundation\Application|string|\Illuminate\Contracts\Routing\UrlGenerator|\Illuminate\Contracts\Foundation\Application
+    private function exportToExcel($results): \Illuminate\Foundation\Application|string|UrlGenerator|Application
     {
         $filename = 'results.xlsx';
 
@@ -331,7 +334,7 @@ class ProductController extends Controller
         $result = file_get_contents($url, false, $context);
 
         if ($result === FALSE) {
-            throw new \Exception('Telegramga xabar yuborishda xatolik yuz berdi');
+            throw new Exception('Telegramga xabar yuborishda xatolik yuz berdi');
         }
 
         json_decode($result);

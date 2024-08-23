@@ -23,6 +23,7 @@ Route::get('/', function () {
 
 //Telegram Webhook marshruti
 Route::post('/telegram/webhook', [ProductController::class, 'handleWebhook']);
+Route::post('/telegram/check', [ProductController::class, 'handleUserInput']);
 
 // Webhookni sozlash uchun marshrut
 Route::get('/set-webhook', function () {
