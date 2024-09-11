@@ -13,6 +13,7 @@
         "laravel/framework": "^10.10",
         "laravel/sanctum": "^3.3",
         "laravel/tinker": "^2.8",
+        "laravel/ui": "^4.5",
         "maatwebsite/excel": "^3.1",
         "norkunas/youtube-dl-php": "^2.6",
         "phpseclib/phpseclib": "*",

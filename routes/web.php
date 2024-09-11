@@ -49,3 +49,7 @@ Route::get('/set-webhook', function () {
     return $result === FALSE ? 'Webhookni o\'rnatishda xatolik yuz berdi' : 'Webhook muvaffaqiyatli o\'rnatildi';
 });
 
+
+Auth::routes();
+
+Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
